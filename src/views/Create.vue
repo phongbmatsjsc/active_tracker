@@ -12,7 +12,7 @@
     <!-- Create -->
     <div class="p-8 flex items-start bg-light-grey rounded-md shadow-lg">
       <!-- Form -->
-      <form class="flex flex-col gap-y-5 w-full">
+      <form @submit.prevent="createWorkout" class="flex flex-col gap-y-5 w-full">
         <h1 class="text-2xl text-at-light-green">Record workout</h1>
 
         <!-- Workout name -->
@@ -39,6 +39,7 @@
             id="workout-type"
             class="p-2 text-gray-500 focus:outline-none"
             v-model="workoutType"
+            @change = "workoutChange"
           >
             <option value="select-workout">Select Workout</option>
             <option value="strength">Strength training</option>
@@ -100,6 +101,7 @@
               />
             </div>
             <img
+              @click = "deleteExercise(item.id)"
               src="../assets/images/trash-light-green.png"
               class="h-4 w-auto absolute -left-5 cursor-pointer"
               alt=""
@@ -170,6 +172,7 @@
               />
             </div>
             <img
+              @click = "deleteExercise(item.id)"
               src="../assets/images/trash-light-green.png"
               class="h-4 w-auto absolute -left-5 cursor-pointer"
               alt=""
@@ -190,7 +193,7 @@
         
         <!-- Record workout -->
         <button
-            type="button"
+            type="submit"
             class="mt-6 py-2 px-6 rounded-sm self-start text-sm 
             text-white bg-at-light-green duration-200 
             border-solid border-2 border-transparent 
@@ -205,7 +208,8 @@
 
 <script>
 import { ref } from "vue";
-import {uid} from 'uid';
+import { uid } from 'uid';
+import { supabase } from '../supabase/init';
 export default {
   name: "create",
   setup() {
@@ -238,12 +242,52 @@ export default {
     };
     
     // Delete exercise
+    const deleteExercise = (id) => {
+      if (exercises.value.length > 1) {
+        exercises.value = exercises.value.filter(i => i.id !== id);
+        return;
+      } else {
+        errMsg.value = "Error: Cannot remove, need to have at least one exercise";
+        setTimeout(() => {
+          errMsg.value = false;
+        }, 5000);
+      }
+    }
 
     // Listens for chaging of workout type input
+    const workoutChange = () => {
+      exercises.value = [];
+      addExercise();
+    }
 
     // Create workout
+    const createWorkout = async () => {
+      try {
+        const {error} = await supabase.from('workout').insert([
+          {
+            workoutName: workoutName.value,
+            workoutType: workoutType.value,
+            exercises: exercises.value,
+          }
+        ]);
+        if (error) throw error;
+        statusMsg.value = 'Success: Workout Created!'
+        workoutName.value = null;
+        workoutType.value = "select-workout";
+        exercises.value = [];
+        setTimeout(() => {
+          statusMsg.value = false;
+        }, 5000);
+      } catch (error) {
+        errMsg.value = `Error: ${error.message}`
+        setTimeout(() => {
+          errMsg.value = false;
+        }, 5000);
+      }
+    }
 
-    return { workoutName, workoutType, exercises, statusMsg, errMsg, addExercise };
+
+    return { workoutName, workoutType, exercises, statusMsg, errMsg, addExercise, workoutChange, deleteExercise, createWorkout};
   },
 };
 </script>
